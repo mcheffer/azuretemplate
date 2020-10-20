@@ -1,0 +1,75 @@
+{
+	"name": "CityChangesDW",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "DWDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "City Staging Key",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "WWI City ID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "City",
+				"type": "nvarchar"
+			},
+			{
+				"name": "State Province",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Country",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Continent",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Sales Territory",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Region",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Subregion",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Location",
+				"type": "WideWorldImportersDW-Standard.sys.geography"
+			},
+			{
+				"name": "Latest Recorded Population",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "Valid From",
+				"type": "datetime2",
+				"scale": 7
+			},
+			{
+				"name": "Valid To",
+				"type": "datetime2",
+				"scale": 7
+			}
+		],
+		"typeProperties": {
+			"schema": "Integration",
+			"table": "City_Staging"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

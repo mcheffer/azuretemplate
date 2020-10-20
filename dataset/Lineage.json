@@ -1,0 +1,13 @@
+{
+	"name": "Lineage",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "DWDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

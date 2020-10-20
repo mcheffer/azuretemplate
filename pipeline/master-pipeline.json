@@ -1,0 +1,90 @@
+{
+	"name": "master-pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetCutOff",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT GETUTCDATE() as CurrentCutoff",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "CurrentCutoff",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "GetLastETLCutoff-City",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT [Cutoff Time] AS LastCutoffTime\nFROM [Integration].[ETL Cutoff]\nWhere [Table Name] ='[Dimension].[City]'",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ETLCutoff",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "CreateLineage-CityDimensions",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Integration].[GetLineageKey]",
+					"storedProcedureParameters": {
+						"NewCutoffTime": {
+							"value": "",
+							"type": "DateTime"
+						},
+						"TableName": {
+							"value": "",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "DWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2020-10-20T22:07:44Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

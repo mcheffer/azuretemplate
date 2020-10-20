@@ -1,0 +1,207 @@
+{
+	"name": "city-pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetCutOff",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT GETUTCDATE() as CurrentCutoff",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "CurrentCutoff",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "CreateLineage-CityDimensions",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "GetLastETLCutoff-City",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Integration].[GetLineageKey]",
+					"storedProcedureParameters": {
+						"NewCutoffTime": {
+							"value": {
+								"value": "@activity('GetCutOff').output.firstRow.CurrentCutoff",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"TableName": {
+							"value": "[Dimension].[City]",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "DWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "GetLastETLCutoff-City",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "GetCutOff",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT [Cutoff Time] AS LastCutoffTime\nFROM [Integration].[ETL Cutoff]\nWhere [Table Name] ='[Dimension].[City]'",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ETLCutoff",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "GetCurrentETLCutOff-City",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "CreateLineage-CityDimensions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT MAX([Data Load Started]) as LatestSystemCutOffTime From Integration.Lineage where [Table Name] ='[Dimension].[City]' and [Data Load Completed] is null",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Lineage",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Copy data1",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "GetCurrentETLCutOff-City",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[Integration].[GetCityUpdates]",
+						"storedProcedureParameters": {
+							"LastCutoff": {
+								"type": "DateTime",
+								"value": {
+									"value": "@activity('GetLastETLCutoff-City').output.firstRow.LastCutoffTime",
+									"type": "Expression"
+								}
+							},
+							"NewCutoff": {
+								"type": "DateTime",
+								"value": {
+									"value": "@activity('GetCurrentETLCutOff-City').output.firstRow.LatestSystemCutoffTime",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink"
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "CityChanges",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "CityChangesDW",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2020-10-20T22:28:42Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
